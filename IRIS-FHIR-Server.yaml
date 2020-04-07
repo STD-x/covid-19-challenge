@@ -1,0 +1,145 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Metadata:
+    Author: Anton Umnikov
+    Last Updated: April 4th, 2020
+    Description: IRIS FHIR Server
+
+Mappings:
+  RegionMap:
+    us-east-2:
+      AMIx64: ami-00c03f7f7f2ec15c3
+    us-east-1:
+      AMIx64: ami-0b69ea66ff7391e80
+    us-west-2:
+      AMIx64: ami-0ce21b51cb31a48b8
+    us-west-1:
+      AMIx64: ami-09a7fe78668f1e2c0
+    ap-northeast-1:
+      AMIx64: ami-0ff21806645c5e492
+    eu-central-1:
+      AMIx64: ami-0ec1ba09723e5bfac
+    eu-west-2:
+      AMIx64: ami-0cb790308f7591fa6
+
+
+
+
+Parameters:
+  SshKeyParameter:
+    Description: SSH Keypair to login to the instance
+    Default: anton-isc
+    Type: AWS::EC2::KeyPair::KeyName
+  InstanceTypeParameter:
+    Description: EC2 instance type
+    Type: String
+    Default: m5.large
+    AllowedValues: 
+      - m5.large
+      - m5.xlarge
+  #LatestAmiId:
+  #  Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+  #  Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+Resources:
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH and IRIS ports from the Internet.
+      #VpcId: !Ref VpcIdParameter
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8004
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8445
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9088
+          ToPort: 9089
+          CidrIp: 0.0.0.0/0
+  ##Node Start##         
+  IRISInstance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Count: '1'
+        Timeout: PT15M
+    Properties:
+      Tags: 
+        - 
+          Key: Name
+          Value: !Sub "${AWS::StackName}-IRIS-FHIR"
+      BlockDeviceMappings:
+        # /root volume
+        - DeviceName: /dev/xvda
+          Ebs:
+            DeleteOnTermination: true
+            VolumeSize: 256
+            VolumeType: gp2
+
+
+      ImageId: #!Ref LatestAmiId
+        Fn::FindInMap:
+        - RegionMap
+        - Ref: AWS::Region
+        - AMIx64
+      InstanceType: !Ref InstanceTypeParameter
+      KeyName: !Ref SshKeyParameter
+      #IamInstanceProfile: !Ref IamInstanceProfileParameter
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      #SubnetId: !Ref InstanceSubnetIdParameter
+      UserData:
+        Fn::Base64:
+         Fn::Sub:
+         - |
+           #!/usr/bin/env bash
+           yum update -y
+           sudo yum install -y docker python3-pip python3 python3-setuptools aws-cfn-bootstrap
+           sudo service docker start
+           # sudo usermod -a -G docker ec2-user
+           # log out and log in to pickup the added group
+           # Also install some common sense stuff
+           yum install -y git
+           yum -y groupinstall "Development Tools"
+           sudo curl -L https://github.com/docker/compose/releases/download/1.22.0/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+           sudo chmod +x /usr/local/bin/docker-compose
+           git clone https://github.com/sleblanc0916/covid-19-challenge.git
+           cd covid-19-challenge
+           export MYIP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+           #replace localhost with public IP here
+           find . -type f -exec sudo sed -i 's/localhost/'"${MYIP}"'/g' {} \;
+           docker-compose up -d
+           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource IRISInstance --region ${AWS::Region}
+         - {
+           MYIP:  '${MYIP}' 
+           }
+
+
+  ##Node End##          
+
+Outputs:
+  AStartingPoint:
+    Description: It takes up to 10 minutes for all the resource to became avaliable after COMPLETE status is displayed. While you wait - watch the video and read https://gettingstartedhealth.intersystems.com/interoperability/exploring-fhir-apis/
+    Value: !Join
+      - ''
+      - ['https://www.youtube.com/watch?v=VQrTATu1CU4']
+  IRISPortal:
+    Description: IRIS Management Portal. Credentials _SYSTEM/sys
+    Value: !Join
+      - ''
+      - ['http://', !GetAtt IRISInstance.PublicIp, ':9088/csp/sys/%25CSP.Portal.Home.zen']
+  FHIRAPIDevPortal:
+    Description: FHIR API Catalog
+    Value: !Join
+      - ''
+      - ['http://', !GetAtt IRISInstance.PublicIp, ':8003/default/documentation']
+  
+ 
