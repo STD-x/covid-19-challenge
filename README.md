@@ -22,11 +22,15 @@ After perfomring these actions your demo should be up and running on your machin
 
 ### Running the demo on AWS
 
+------
+
 IRIS-FHIR-Server.yaml is a CloudFormation Template that would deploy this demo on AWS EC2 instance. You need to be logged in the AWS account and have at least one EC2 SSH Keypair avaliable. 
 
 https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/template?stackName=InterSystems-FHIR-Server&templateURL=https://isc-tech-validation.s3.amazonaws.com/IRIS-FHIR-Server.yaml
 
 Alternatevely go to CloudFormation, Create Stack, Upload Template and then select IRIS-FHIR-Server.yaml.
+
+Choose the name for your demo and Existing EC2 SSH Keypair. If you don't have one - follow [this guide] (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) to create one.
 
 In 3-5 minutes you'll see the following in the Outputs tab:
 
