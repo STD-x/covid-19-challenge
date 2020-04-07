@@ -30,7 +30,7 @@ https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/crea
 
 Alternatevely go to CloudFormation, Create Stack, Upload Template and then select IRIS-FHIR-Server.yaml.
 
-Choose the name for your demo and Existing EC2 SSH Keypair. If you don't have one - follow [this guide] (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) to create one.
+Choose the name for your demo and Existing EC2 SSH Keypair. If you don't have one - follow [this guide](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) to create one.
 
 In 3-5 minutes you'll see the following in the Outputs tab:
 
